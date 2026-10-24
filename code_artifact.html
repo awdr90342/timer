@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧循環間隔計時儀表板 - 自訂階段性質旗艦版</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .progress-circle {
+      transition: stroke-dashoffset 0.15s linear, stroke 0.4s ease;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.45);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden">
+
+  <!-- Main Container -->
+  <div class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8">
+
+    <!-- Top Header -->
+    <header class="flex flex-wrap items-center justify-between gap-4 py-3 mb-4 border-b border-slate-800/80">
+      <div class="flex items-center gap-3">
+        <div id="brandIconBadge" class="p-2.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shadow-inner transition-colors duration-500">
+          <i class="ph ph-hourglass-high text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            智慧循環間隔計時儀表板
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider bg-slate-800 text-cyan-400 border border-cyan-500/30">PRO TYPE</span>
+          </h1>
+          <p class="text-xs text-slate-400">自由建立與自訂階段性質（名稱/顏色/音效）&bull; 循環目標與多段自訂時間</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Sound Controls -->
+        <button id="btnSoundToggle" class="px-3 py-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 transition flex items-center gap-2 text-xs">
+          <i id="soundIcon" class="ph ph-speaker-high text-base text-cyan-400"></i>
+          <span id="soundLabel" class="hidden sm:inline">音效開啟</span>
+        </button>
+
+        <button id="btnTestSound" class="px-3 py-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white transition text-xs flex items-center gap-1.5" title="測試音效提示">
+          <i class="ph ph-bell text-base text-amber-400"></i>
+          <span class="hidden sm:inline">試聽</span>
+        </button>
+
+        <!-- Stage Types Manager Button -->
+        <button onclick="openTypeManagerModal()" class="px-3 py-2 rounded-xl border border-purple-500/30 bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 transition text-xs flex items-center gap-1.5 font-medium shadow-sm">
+          <i class="ph ph-tag text-base"></i>
+          <span>階段性質管理</span>
+        </button>
+
+        <!-- Loop / Goal Setting Button -->
+        <button onclick="openCycleGoalModal()" class="px-3 py-2 rounded-xl border border-cyan-500/30 bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-300 transition text-xs flex items-center gap-1.5 font-medium shadow-sm">
+          <i class="ph ph-sliders text-base"></i>
+          <span>循環與目標</span>
+        </button>
+
+        <!-- Fullscreen Button -->
+        <button id="btnFullscreen" class="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white transition text-xs flex items-center gap-1.5" title="全螢幕模式">
+          <i id="fullscreenIcon" class="ph ph-corners-out text-base"></i>
+          <span class="hidden sm:inline">全螢幕</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Quick Presets Bar -->
+    <div class="mb-4 flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar text-xs">
+      <span class="text-slate-400 font-medium whitespace-nowrap flex items-center gap-1 mr-1">
+        <i class="ph ph-sparkle text-cyan-400"></i> 快速範本：
+      </span>
+      <button onclick="applyPreset('default_custom')" class="px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 font-medium transition whitespace-nowrap">
+        你的原定 (1分/1分 ➔ 2分/1分)
+      </button>
+      <button onclick="applyPreset('fitness_complex')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition whitespace-nowrap">
+        全方位健身 (高強度 + 拉伸 + 喝水)
+      </button>
+      <button onclick="applyPreset('deep_work_routine')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition whitespace-nowrap">
+        深度心流 (專注 + 深呼吸 + 伸展)
+      </button>
+      <button onclick="applyPreset('single_loop')" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition whitespace-nowrap">
+        單次完整循環模式
+      </button>
+      <button onclick="openBatchModal()" class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 transition flex items-center gap-1 whitespace-nowrap ml-auto">
+        <i class="ph ph-faders"></i> 批次建立
+      </button>
+    </div>
+
+    <!-- Cycle Goal & Stage Goal Status Bar -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+      <!-- Target Cycle Status -->
+      <div class="glass-panel p-3.5 rounded-2xl flex items-center justify-between border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <i class="ph ph-repeat text-xl"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-400 block font-medium">循環執行模式</span>
+            <div class="flex items-center gap-1.5">
+              <strong id="displayCycleGoal" class="text-sm font-bold text-white">單次循環 (跑完即結束)</strong>
+              <span id="cycleModeBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">1 輪</span>
+            </div>
+          </div>
+        </div>
+        <button onclick="openCycleGoalModal()" class="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-4">變更</button>
+      </div>
+
+      <!-- Target Stage Goal Status -->
+      <div class="glass-panel p-3.5 rounded-2xl flex items-center justify-between border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i class="ph ph-flag-checkered text-xl"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-400 block font-medium">完成階段總目標</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-300">已達成</span>
+              <strong id="displayStageCompleted" class="text-sm font-bold text-emerald-400 font-mono">0</strong>
+              <span class="text-xs text-slate-400 font-mono">/</span>
+              <strong id="displayStageTarget" class="text-sm font-bold text-white font-mono">4</strong>
+              <span class="text-xs text-slate-400">階段</span>
+            </div>
+          </div>
+        </div>
+        <div class="w-24 sm:w-28 bg-slate-800 rounded-full h-2.5 overflow-hidden">
+          <div id="goalProgressBar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Workspace (7 Cols Dashboard Timer / 5 Cols Sequence Builder) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+      
+      <!-- LEFT: Big Dashboard Timer Display -->
+      <section class="lg:col-span-7 flex flex-col gap-4">
+        
+        <div id="mainTimerCard" class="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col items-center relative overflow-hidden transition-all duration-500 shadow-2xl">
+          <!-- Dynamic Ambient Background Glow -->
+          <div id="ambientBackdrop" class="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none transition-all duration-700 bg-cyan-400"></div>
+
+          <!-- Stage Category Badge & Counts -->
+          <div class="w-full flex items-center justify-between z-10 mb-2">
+            <!-- Dynamic Custom Phase Badge -->
+            <div id="currentPhaseBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs sm:text-sm font-semibold transition-all duration-300">
+              <span id="badgePulseDot" class="w-2.5 h-2.5 rounded-full"></span>
+              <span id="currentPhaseTitle">工作中 (1 分鐘)</span>
+            </div>
+
+            <!-- Loop & Steps Count -->
+            <div class="flex items-center gap-2 font-mono text-xs text-slate-300">
+              <span class="flex items-center gap-1 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
+                <i class="ph ph-steps text-slate-400"></i>
+                第 <strong id="stepCountIndicator" class="text-white">1</strong> / <span id="totalStepsIndicator">4</span> 階
+              </span>
+              <span class="flex items-center gap-1 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
+                <i class="ph ph-repeat text-slate-400"></i>
+                循環 <strong id="cycleCountIndicator" class="text-white">1</strong><span id="cycleMaxIndicator" class="text-slate-500">/1</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Circular Progress Meter -->
+          <div class="relative w-64 h-64 sm:w-80 sm:h-80 my-3 flex items-center justify-center z-10">
+            <svg class="w-full h-full" viewBox="0 0 260 260">
+              <circle
+                cx="130"
+                cy="130"
+                r="112"
+                stroke="currentColor"
+                stroke-width="14"
+                fill="transparent"
+                class="text-slate-800/80"
+              />
+              <circle
+                id="timerProgressCircle"
+                cx="130"
+                cy="130"
+                r="112"
+                stroke="#06b6d4"
+                stroke-width="14"
+                stroke-linecap="round"
+                fill="transparent"
+                stroke-dasharray="703.71"
+                stroke-dashoffset="0"
+                class="progress-circle"
+              />
+            </svg>
+
+            <!-- Inner Timer Countdown -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center select-none text-center">
+              <span id="mainCountdown" class="text-6xl sm:text-7xl font-mono font-extrabold tracking-tight text-white drop-shadow-md">
+                01:00
+              </span>
+              <span id="phaseCategoryDesc" class="text-xs uppercase tracking-widest font-bold mt-1 text-cyan-400 transition-colors duration-300">
+                FOCUS TIME
+              </span>
+              <div class="mt-2 text-xs font-mono text-slate-400 bg-slate-900/70 px-3 py-0.5 rounded-md border border-slate-800 flex items-center gap-1.5">
+                <span>本階時長</span>
+                <span id="currentIntervalTotalTime" class="text-white font-bold">01:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Phase & Remaining Info -->
+          <div class="w-full z-10 flex flex-wrap items-center justify-between text-xs py-2.5 px-4 rounded-xl bg-slate-900/60 border border-slate-800/80 text-slate-400 mb-4 gap-2">
+            <div class="flex items-center gap-2 truncate">
+              <span class="text-slate-500 font-medium shrink-0">下一階段：</span>
+              <span id="nextPhasePreview" class="text-slate-200 font-semibold truncate">休息中 (01:00)</span>
+            </div>
+            <div class="flex items-center gap-1 font-mono text-slate-400 shrink-0">
+              <span class="text-slate-500">當輪剩餘：</span>
+              <span id="totalRemainingTime" class="text-slate-200 font-semibold">05:00</span>
+            </div>
+          </div>
+
+          <!-- Controls Bar -->
+          <div class="w-full z-10 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+            <!-- Prev -->
+            <button id="btnPrev" onclick="skipToPrevPhase()" class="p-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center shadow" title="上一階段 (P)">
+              <i class="ph ph-skip-back text-xl"></i>
+            </button>
+
+            <!-- Reset Step -->
+            <button id="btnReset" onclick="resetTimer()" class="p-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center shadow" title="重設當前階段 (R)">
+              <i class="ph ph-arrow-counter-clockwise text-xl"></i>
+            </button>
+
+            <!-- Play / Pause -->
+            <button id="btnPlayPause" onclick="togglePlayPause()" class="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold text-base sm:text-lg flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition transform active:scale-95">
+              <i id="playIcon" class="ph-fill ph-play text-2xl"></i>
+              <span id="playText">開始計時</span>
+            </button>
+
+            <!-- Next -->
+            <button id="btnSkip" onclick="skipToNextPhase(false)" class="p-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center shadow" title="跳過至下一階段 (N)">
+              <i class="ph ph-skip-forward text-xl"></i>
+            </button>
+          </div>
+
+          <!-- Bottom Footer Quick Controls -->
+          <div class="w-full z-10 flex items-center justify-between mt-3 text-xs text-slate-400 pt-2">
+            <span class="flex items-center gap-1">
+              <i class="ph ph-keyboard text-slate-500"></i> 空白鍵播放/暫停 &bull; N 下一階 &bull; P 上一階 &bull; R 重置
+            </span>
+            <button onclick="resetWholeSession()" class="text-xs text-rose-400 hover:text-rose-300 transition underline underline-offset-4">
+              全部歸零重來
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Real-time Dynamic Metrics -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 text-center">
+            <span class="text-[11px] text-slate-400 block mb-1">累積總時長</span>
+            <span id="kpiTotalTime" class="font-mono text-base sm:text-lg font-bold text-slate-200">00:00</span>
+          </div>
+          <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 text-center">
+            <span id="kpiFirstTypeName" class="text-[11px] text-cyan-400 block mb-1 truncate">專注/工作時間</span>
+            <span id="kpiFirstTypeTime" class="font-mono text-base sm:text-lg font-bold text-cyan-400">00:00</span>
+          </div>
+          <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 text-center">
+            <span id="kpiSecondTypeName" class="text-[11px] text-amber-400 block mb-1 truncate">休息時間</span>
+            <span id="kpiSecondTypeTime" class="font-mono text-base sm:text-lg font-bold text-amber-400">00:00</span>
+          </div>
+          <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 text-center">
+            <span class="text-[11px] text-slate-400 block mb-1">完成階段總數</span>
+            <span id="kpiCompletedSteps" class="font-mono text-base sm:text-lg font-bold text-emerald-400">0</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT: Sequence Builder & Stage Types Sidebar -->
+      <section class="lg:col-span-5 flex flex-col gap-4">
+        
+        <div class="glass-panel rounded-3xl p-5 border border-slate-800 flex flex-col h-full">
+          
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+            <div>
+              <h2 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                <i class="ph ph-list-numbers text-cyan-400 text-base"></i>
+                自訂計時階段清單 (<span id="sequenceCountBadge">4</span>)
+              </h2>
+              <p class="text-[11px] text-slate-400">點擊階段可切換，自由指定各階段性質與時長</p>
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+              <button onclick="openAddIntervalModal()" class="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center gap-1 transition">
+                <i class="ph ph-plus-circle text-base"></i> 新增
+              </button>
+            </div>
+          </div>
+
+          <!-- Stage Sequence List Container -->
+          <div id="intervalListContainer" class="space-y-2.5 max-h-[460px] overflow-y-auto custom-scrollbar pr-1">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Bottom Management Shortcuts -->
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <button onclick="openTypeManagerModal()" class="text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium">
+              <i class="ph ph-palette"></i> 編輯/新增階段性質
+            </button>
+            <button onclick="openCycleGoalModal()" class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+              <i class="ph ph-gear"></i> 循環與目標
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL 1: STAGE TYPES MANAGER (自訂階段性質管理器) -->
+  <div id="typeManagerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border border-slate-700 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4 shrink-0">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="ph ph-tag text-purple-400 text-lg"></i> 自訂階段性質與分類
+          </h3>
+          <p class="text-xs text-slate-400">可自訂如「專注、休息、拉伸、深呼吸、高強度訓練、閱讀、喝水」等任何名稱、顏色與音效</p>
+        </div>
+        <button onclick="closeTypeManagerModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Type List -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3 mb-4">
+        <div id="typesList" class="space-y-2.5">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Add New Type Form Box -->
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800/80 mt-4">
+          <h4 class="text-xs font-bold text-slate-200 mb-2.5 flex items-center gap-1.5">
+            <i class="ph ph-plus-circle text-purple-400"></i> 新增或編輯階段性質
+          </h4>
+          <input type="hidden" id="editTypeId" value="">
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">性質名稱 (例：拉伸 / 深呼吸 / 高強度 / 喝水)</label>
+              <input type="text" id="newTypeName" placeholder="輸入自訂性質名稱" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-400 mb-1">主題顏色標籤</label>
+                <select id="newTypeColor" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500">
+                  <option value="cyan">青水藍 (Cyan)</option>
+                  <option value="amber">溫暖琥珀 (Amber)</option>
+                  <option value="emerald">清新草綠 (Emerald)</option>
+                  <option value="purple">靈感紫 (Purple)</option>
+                  <option value="rose">熱情玫瑰紅 (Rose)</option>
+                  <option value="indigo">沉穩靛藍 (Indigo)</option>
+                  <option value="orange">活力橙 (Orange)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-slate-400 mb-1">階段開始提示音效</label>
+                <select id="newTypeSound" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500">
+                  <option value="chime_up">活力升音階 (Ascending Chime)</option>
+                  <option value="chime_gentle">溫和輕柔鈴 (Gentle Chime)</option>
+                  <option value="double_bell">清脆雙音 (Clear Bell)</option>
+                  <option value="deep_gong">沉穩禪音 (Deep Calm)</option>
+                  <option value="high_ping">清脆短鳴 (Crisp Ping)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button type="button" onclick="testSelectedTypeSound()" class="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs flex items-center gap-1">
+                <i class="ph ph-play"></i> 試聽音效
+              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btnCancelEditType" onclick="cancelEditType()" class="px-3 py-1.5 text-slate-400 hover:text-white hidden">取消編輯</button>
+                <button type="button" onclick="saveStageType()" id="btnSaveType" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 font-bold text-white text-xs shadow-md shadow-purple-600/30">
+                  新增性質
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+        <button type="button" onclick="closeTypeManagerModal()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold">
+          完成返回
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: CYCLE COUNT & TARGET GOALS (自訂循環與目標) -->
+  <div id="cycleGoalModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border border-slate-700 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="ph ph-sliders text-cyan-400 text-lg"></i> 自訂循環次數與完成目標
+        </h3>
+        <button onclick="closeCycleGoalModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        
+        <!-- Loop Mode -->
+        <div class="bg-slate-900/70 p-4 rounded-2xl border border-slate-800">
+          <label class="block font-bold text-sm text-slate-200 mb-2 flex items-center gap-2">
+            <i class="ph ph-repeat text-cyan-400"></i> 1. 循環次數設定 (單次 / 多次 / 無限)
+          </label>
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <button type="button" onclick="setCycleOption('single')" id="optCycleSingle" class="p-2.5 rounded-xl border border-cyan-500 bg-cyan-950/40 text-cyan-300 font-bold text-center">
+              單次循環 (1 輪)
+            </button>
+            <button type="button" onclick="setCycleOption('custom')" id="optCycleCustom" class="p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center">
+              自訂次數
+            </button>
+            <button type="button" onclick="setCycleOption('infinite')" id="optCycleInfinite" class="p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center">
+              無限循環 (&infin;)
+            </button>
+          </div>
+
+          <div id="customCycleInputRow" class="hidden items-center gap-2 pt-2 border-t border-slate-800/60">
+            <span class="text-slate-300">執行指定輪數：</span>
+            <input type="number" id="inputCustomCycleCount" min="1" max="999" value="3" class="w-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-center font-mono text-white text-sm focus:border-cyan-500 focus:outline-none">
+            <span class="text-slate-400">輪 (完成後響起結束慶祝鈴聲)</span>
+          </div>
+        </div>
+
+        <!-- Stage Goal Mode -->
+        <div class="bg-slate-900/70 p-4 rounded-2xl border border-slate-800">
+          <label class="block font-bold text-sm text-slate-200 mb-2 flex items-center gap-2">
+            <i class="ph ph-flag-checkered text-emerald-400"></i> 2. 完成階段目標設定
+          </label>
+
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="goalModeRadio" value="auto" id="goalModeAuto" checked onchange="toggleGoalInputMode()" class="peer sr-only">
+              <div class="p-2.5 text-center rounded-xl border border-slate-800 bg-slate-900 peer-checked:border-emerald-500 peer-checked:bg-emerald-950/40 peer-checked:text-emerald-300 text-slate-400 font-medium transition">
+                隨循環自動計算
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="goalModeRadio" value="manual" id="goalModeManual" onchange="toggleGoalInputMode()" class="peer sr-only">
+              <div class="p-2.5 text-center rounded-xl border border-slate-800 bg-slate-900 peer-checked:border-emerald-500 peer-checked:bg-emerald-950/40 peer-checked:text-emerald-300 text-slate-400 font-medium transition">
+                自訂完成階段數
+              </div>
+            </label>
+          </div>
+
+          <div id="customGoalInputRow" class="hidden items-center gap-2 pt-2 border-t border-slate-800/60">
+            <span class="text-slate-300">目標達成階段數：</span>
+            <input type="number" id="inputCustomGoalStages" min="1" max="999" value="8" class="w-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-center font-mono text-white text-sm focus:border-emerald-500 focus:outline-none">
+            <span class="text-slate-400">階段 (達成時發出喝采提醒)</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeCycleGoalModal()" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white">取消</button>
+          <button type="button" onclick="saveCycleGoalSettings()" class="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 transition">儲存套用</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD / EDIT STAGE (自訂階段時長與性質) -->
+  <div id="intervalModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i class="ph ph-clock-clockwise text-cyan-400"></i> 新增階段
+        </h3>
+        <button onclick="closeIntervalModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <form id="intervalForm" onsubmit="handleIntervalFormSubmit(event)" class="space-y-4">
+        <input type="hidden" id="editingIndex" value="-1">
+
+        <!-- Stage Nature / Type Selection -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-medium text-slate-300">階段性質 (可自由選擇或新增)</label>
+            <button type="button" onclick="closeIntervalModal(); openTypeManagerModal();" class="text-[11px] text-purple-400 hover:underline">管理性質</button>
+          </div>
+          <div id="modalTypeGrid" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1 bg-slate-900/50 rounded-2xl border border-slate-800">
+            <!-- Dynamically populated options -->
+          </div>
+        </div>
+
+        <!-- Stage Custom Name -->
+        <div>
+          <label for="modalLabel" class="block text-xs font-medium text-slate-300 mb-1">階段自訂標題 (選填)</label>
+          <input type="text" id="modalLabel" placeholder="例如：計時1分鐘 / 肩頸伸展 / 核心衝刺" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 font-sans">
+        </div>
+
+        <!-- Duration: Minutes & Seconds -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">階段時長設定</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
+              <input type="number" id="modalMinutes" min="0" max="240" value="1" class="w-full bg-transparent text-white font-mono text-center text-lg focus:outline-none">
+              <span class="text-xs text-slate-400 font-medium ml-1">分鐘</span>
+            </div>
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
+              <input type="number" id="modalSeconds" min="0" max="59" value="0" class="w-full bg-transparent text-white font-mono text-center text-lg focus:outline-none">
+              <span class="text-xs text-slate-400 font-medium ml-1">秒鐘</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeIntervalModal()" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs">取消</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 transition">儲存階段</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- MODAL 4: BATCH GENERATOR -->
+  <div id="batchModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="ph ph-faders text-cyan-400"></i> 批次快速建立階段清單
+        </h3>
+        <button onclick="closeBatchModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">主要性質與時長 (如：工作)</label>
+          <div class="grid grid-cols-12 gap-2">
+            <select id="batchType1" class="col-span-6 bg-slate-900 border border-slate-700 rounded-xl p-2 text-white"></select>
+            <input type="number" id="batchMin1" min="0" value="1" placeholder="分" class="col-span-3 bg-slate-900 border border-slate-700 rounded-xl p-2 text-center text-white font-mono">
+            <input type="number" id="batchSec1" min="0" max="59" value="0" placeholder="秒" class="col-span-3 bg-slate-900 border border-slate-700 rounded-xl p-2 text-center text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">次要性質與時長 (如：休息/伸展)</label>
+          <div class="grid grid-cols-12 gap-2">
+            <select id="batchType2" class="col-span-6 bg-slate-900 border border-slate-700 rounded-xl p-2 text-white"></select>
+            <input type="number" id="batchMin2" min="0" value="1" placeholder="分" class="col-span-3 bg-slate-900 border border-slate-700 rounded-xl p-2 text-center text-white font-mono">
+            <input type="number" id="batchSec2" min="0" max="59" value="0" placeholder="秒" class="col-span-3 bg-slate-900 border border-slate-700 rounded-xl p-2 text-center text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">產生組數 (例如 4 組即 4次主要+4次次要)</label>
+          <input type="number" id="batchRounds" min="1" max="50" value="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-center text-white font-mono">
+        </div>
+
+        <button onclick="applyBatchGenerator()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 font-bold text-slate-950 mt-2 shadow-lg shadow-cyan-500/20">
+          產生並套用階段清單
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900/95 border border-slate-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs pointer-events-none">
+    <i id="toastIcon" class="ph ph-bell text-cyan-400 text-base"></i>
+    <span id="toastMsg">通知提示</span>
+  </div>
+
+  <!-- Javascript Core Logic -->
+  <script>
+    /* =========================================================
+       COLOR THEME DICTIONARY
+       ========================================================= */
+    const COLOR_THEMES = {
+      cyan: {
+        id: 'cyan',
+        label: '青水藍',
+        hex: '#06b6d4',
+        glow: 'rgba(6, 182, 212, 0.4)',
+        bgRgba: 'rgba(6, 182, 212, 0.12)',
+        borderRgba: 'rgba(6, 182, 212, 0.35)',
+        textClass: 'text-cyan-400',
+        badgeClass: 'bg-cyan-500/15 border-cyan-500/35 text-cyan-300'
+      },
+      amber: {
+        id: 'amber',
+        label: '溫暖琥珀',
+        hex: '#f59e0b',
+        glow: 'rgba(245, 158, 11, 0.4)',
+        bgRgba: 'rgba(245, 158, 11, 0.12)',
+        borderRgba: 'rgba(245, 158, 11, 0.35)',
+        textClass: 'text-amber-400',
+        badgeClass: 'bg-amber-500/15 border-amber-500/35 text-amber-300'
+      },
+      emerald: {
+        id: 'emerald',
+        label: '清新草綠',
+        hex: '#10b981',
+        glow: 'rgba(16, 185, 129, 0.4)',
+        bgRgba: 'rgba(16, 185, 129, 0.12)',
+        borderRgba: 'rgba(16, 185, 129, 0.35)',
+        textClass: 'text-emerald-400',
+        badgeClass: 'bg-emerald-500/15 border-emerald-500/35 text-emerald-300'
+      },
+      purple: {
+        id: 'purple',
+        label: '靈感紫',
+        hex: '#a855f7',
+        glow: 'rgba(168, 85, 247, 0.4)',
+        bgRgba: 'rgba(168, 85, 247, 0.12)',
+        borderRgba: 'rgba(168, 85, 247, 0.35)',
+        textClass: 'text-purple-400',
+        badgeClass: 'bg-purple-500/15 border-purple-500/35 text-purple-300'
+      },
+      rose: {
+        id: 'rose',
+        label: '熱情玫瑰',
+        hex: '#f43f5e',
+        glow: 'rgba(244, 63, 94, 0.4)',
+        bgRgba: 'rgba(244, 63, 94, 0.12)',
+        borderRgba: 'rgba(244, 63, 94, 0.35)',
+        textClass: 'text-rose-400',
+        badgeClass: 'bg-rose-500/15 border-rose-500/35 text-rose-300'
+      },
+      indigo: {
+        id: 'indigo',
+        label: '沉穩靛藍',
+        hex: '#6366f1',
+        glow: 'rgba(99, 102, 241, 0.4)',
+        bgRgba: 'rgba(99, 102, 241, 0.12)',
+        borderRgba: 'rgba(99, 102, 241, 0.35)',
+        textClass: 'text-indigo-400',
+        badgeClass: 'bg-indigo-500/15 border-indigo-500/35 text-indigo-300'
+      },
+      orange: {
+        id: 'orange',
+        label: '活力橙',
+        hex: '#f97316',
+        glow: 'rgba(249, 115, 22, 0.4)',
+        bgRgba: 'rgba(249, 115, 22, 0.12)',
+        borderRgba: 'rgba(249, 115, 22, 0.35)',
+        textClass: 'text-orange-400',
+        badgeClass: 'bg-orange-500/15 border-orange-500/35 text-orange-300'
+      }
+    };
+
+    /* =========================================================
+       WEB AUDIO SYNTHESIZER
+       ========================================================= */
+    class AudioSynthesizer {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // 3, 2, 1 Countdown Beep
+      playCountdownBeep(num) {
+        if (!this.enabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const freq = num === 1 ? 1046.50 : 880;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        const now = this.ctx.currentTime;
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.18);
+      }
+
+      // Stage Type Sounds
+      playSoundByName(soundName) {
+        if (!this.enabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+
+        if (soundName === 'chime_up') {
+          // Ascending Chime (e.g. D5, A5, D6)
+          [587.33, 880, 1174.66].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = now + (idx * 0.08);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.65);
+          });
+        } else if (soundName === 'chime_gentle') {
+          // Gentle warm chords (C5, E5, G5)
+          [523.25, 659.25, 783.99].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = now + (idx * 0.1);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.85);
+          });
+        } else if (soundName === 'double_bell') {
+          // Double crisp bell
+          [784, 1046.5].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = now + (idx * 0.14);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.25, t);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.55);
+          });
+        } else if (soundName === 'deep_gong') {
+          // Deep calming bell
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(261.63, now); // C4
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 1.25);
+        } else {
+          // High ping
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1318.51, now); // E6
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        }
+      }
+
+      // Finish Celebration Fanfare
+      playCelebration() {
+        if (!this.enabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        chords.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const t = this.ctx.currentTime + (idx * 0.12);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.26, t);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 1.25);
+        });
+      }
+    }
+
+    const sound = new AudioSynthesizer();
+
+    /* =========================================================
+       CUSTOM STAGE TYPES (階段性質資料庫)
+       ========================================================= */
+    let stageTypes = [
+      { id: 'work', name: '專注工作', color: 'cyan', sound: 'chime_up', icon: 'ph-lightning' },
+      { id: 'rest', name: '舒緩休息', color: 'amber', sound: 'chime_gentle', icon: 'ph-coffee' },
+      { id: 'stretch', name: '伸展拉筋', color: 'emerald', sound: 'double_bell', icon: 'ph-person-simple-walk' },
+      { id: 'breathe', name: '深呼吸放鬆', color: 'purple', sound: 'deep_gong', icon: 'ph-wind' },
+      { id: 'hiit', name: '高強度訓練', color: 'rose', sound: 'high_ping', icon: 'ph-fire' },
+      { id: 'hydration', name: '補充水分', color: 'indigo', sound: 'double_bell', icon: 'ph-drop' }
+    ];
+
+    /* =========================================================
+       TIMER STATE
+       ========================================================= */
+    // Default intervals
+    let intervals = [
+      { id: 1, typeId: 'work', title: '計時1分鐘', durationSec: 60 },
+      { id: 2, typeId: 'rest', title: '休息1分鐘', durationSec: 60 },
+      { id: 3, typeId: 'work', title: '計時2分鐘', durationSec: 120 },
+      { id: 4, typeId: 'rest', title: '休息1分鐘', durationSec: 60 }
+    ];
+
+    let currentIndex = 0;
+    let timeRemaining = intervals[0].durationSec;
+    let isRunning = false;
+    let timerId = null;
+
+    // Cycle Settings: 'single', 'custom', 'infinite'
+    let cycleMode = 'single';
+    let targetCycles = 1;
+    let currentCycle = 1;
+
+    // Target Goals: 'auto', 'manual'
+    let goalMode = 'auto';
+    let targetStagesGoal = 4;
+    let completedStagesCount = 0;
+
+    // Realtime KPI Accumulated Time (Key: typeId, Value: seconds)
+    let typeDurationMap = {};
+    let totalElapsedSec = 0;
+
+    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 112; // ~703.71
+
+    /* =========================================================
+       DOM ELEMENTS
+       ========================================================= */
+    const mainCountdown = document.getElementById("mainCountdown");
+    const timerProgressCircle = document.getElementById("timerProgressCircle");
+    const currentPhaseTitle = document.getElementById("currentPhaseTitle");
+    const currentPhaseBadge = document.getElementById("currentPhaseBadge");
+    const badgePulseDot = document.getElementById("badgePulseDot");
+    const phaseCategoryDesc = document.getElementById("phaseCategoryDesc");
+    const currentIntervalTotalTime = document.getElementById("currentIntervalTotalTime");
+    const stepCountIndicator = document.getElementById("stepCountIndicator");
+    const totalStepsIndicator = document.getElementById("totalStepsIndicator");
+    const cycleCountIndicator = document.getElementById("cycleCountIndicator");
+    const cycleMaxIndicator = document.getElementById("cycleMaxIndicator");
+    const nextPhasePreview = document.getElementById("nextPhasePreview");
+    const totalRemainingTime = document.getElementById("totalRemainingTime");
+    const btnPlayPause = document.getElementById("btnPlayPause");
+    const playIcon = document.getElementById("playIcon");
+    const playText = document.getElementById("playText");
+    const mainTimerCard = document.getElementById("mainTimerCard");
+    const ambientBackdrop = document.getElementById("ambientBackdrop");
+    const brandIconBadge = document.getElementById("brandIconBadge");
+    const intervalListContainer = document.getElementById("intervalListContainer");
+    const sequenceCountBadge = document.getElementById("sequenceCountBadge");
+
+    // Cycle & Goal Display
+    const displayCycleGoal = document.getElementById("displayCycleGoal");
+    const cycleModeBadge = document.getElementById("cycleModeBadge");
+    const displayStageCompleted = document.getElementById("displayStageCompleted");
+    const displayStageTarget = document.getElementById("displayStageTarget");
+    const goalProgressBar = document.getElementById("goalProgressBar");
+
+    // Metrics
+    const kpiTotalTime = document.getElementById("kpiTotalTime");
+    const kpiFirstTypeName = document.getElementById("kpiFirstTypeName");
+    const kpiFirstTypeTime = document.getElementById("kpiFirstTypeTime");
+    const kpiSecondTypeName = document.getElementById("kpiSecondTypeName");
+    const kpiSecondTypeTime = document.getElementById("kpiSecondTypeTime");
+    const kpiCompletedSteps = document.getElementById("kpiCompletedSteps");
+
+    /* =========================================================
+       UTILITIES
+       ========================================================= */
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function getType(typeId) {
+      return stageTypes.find(t => t.id === typeId) || {
+        id: 'unknown',
+        name: '自訂階段',
+        color: 'cyan',
+        sound: 'chime_up',
+        icon: 'ph-clock'
+      };
+    }
+
+    function showToast(message, icon = 'ph-bell') {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      const toastIcon = document.getElementById("toastIcon");
+      toastMsg.innerText = message;
+      toastIcon.className = `ph ${icon} text-cyan-400 text-base`;
+      toast.classList.remove('opacity-0', 'translate-y-24');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-24');
+      }, 2600);
+    }
+
+    function updateGoalTargets() {
+      if (goalMode === 'auto') {
+        if (cycleMode === 'infinite') {
+          targetStagesGoal = intervals.length * 5;
+        } else {
+          targetStagesGoal = intervals.length * targetCycles;
+        }
+      }
+    }
+
+    /* =========================================================
+       UI RENDERING
+       ========================================================= */
+    function renderTimerUI() {
+      if (intervals.length === 0) return;
+      const current = intervals[currentIndex];
+      const typeInfo = getType(current.typeId);
+      const colorDef = COLOR_THEMES[typeInfo.color] || COLOR_THEMES.cyan;
+
+      // Time strings
+      mainCountdown.innerText = formatTime(timeRemaining);
+      currentIntervalTotalTime.innerText = formatTime(current.durationSec);
+
+      // SVG Progress
+      const progressFraction = (current.durationSec - timeRemaining) / current.durationSec;
+      const strokeOffset = CIRCLE_CIRCUMFERENCE - (progressFraction * CIRCLE_CIRCUMFERENCE);
+      timerProgressCircle.style.strokeDashoffset = strokeOffset;
+      timerProgressCircle.setAttribute("stroke", colorDef.hex);
+
+      // Dynamic Card Aesthetic and Colors
+      mainTimerCard.style.boxShadow = `0 0 55px -6px ${colorDef.glow}`;
+      ambientBackdrop.style.backgroundColor = colorDef.hex;
+      ambientBackdrop.style.boxShadow = `0 0 100px 50px ${colorDef.glow}`;
+      brandIconBadge.style.borderColor = colorDef.borderRgba;
+      brandIconBadge.style.color = colorDef.hex;
+
+      // Stage Badge
+      currentPhaseBadge.className = `flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs sm:text-sm font-semibold transition-all duration-300 ${colorDef.badgeClass}`;
+      badgePulseDot.style.backgroundColor = colorDef.hex;
+      if (isRunning) badgePulseDot.classList.add("animate-pulse");
+      else badgePulseDot.classList.remove("animate-pulse");
+
+      currentPhaseTitle.innerText = `第 ${currentIndex + 1} 階：${current.title || typeInfo.name}`;
+      phaseCategoryDesc.innerText = `${typeInfo.name.toUpperCase()}`;
+      phaseCategoryDesc.style.color = colorDef.hex;
+
+      // Indicators
+      stepCountIndicator.innerText = currentIndex + 1;
+      totalStepsIndicator.innerText = intervals.length;
+      cycleCountIndicator.innerText = currentCycle;
+
+      // Cycle header display
+      if (cycleMode === 'single') {
+        cycleMaxIndicator.innerText = '/1 (單次)';
+        displayCycleGoal.innerText = '單次循環 (跑完即結束)';
+        cycleModeBadge.innerText = '1 輪';
+      } else if (cycleMode === 'custom') {
+        cycleMaxIndicator.innerText = `/${targetCycles}`;
+        displayCycleGoal.innerText = `自訂 ${targetCycles} 輪循環`;
+        cycleModeBadge.innerText = `${targetCycles} 輪`;
+      } else {
+        cycleMaxIndicator.innerText = '/∞';
+        displayCycleGoal.innerText = '無限持續循環';
+        cycleModeBadge.innerText = '無限';
+      }
+
+      // Stage Goals
+      displayStageCompleted.innerText = completedStagesCount;
+      displayStageTarget.innerText = cycleMode === 'infinite' && goalMode === 'auto' ? '∞' : targetStagesGoal;
+      const goalPercent = targetStagesGoal > 0 ? Math.min(100, Math.round((completedStagesCount / targetStagesGoal) * 100)) : 0;
+      goalProgressBar.style.width = `${goalPercent}%`;
+
+      // Next Stage Preview
+      if (currentIndex + 1 < intervals.length) {
+        const next = intervals[currentIndex + 1];
+        const nextType = getType(next.typeId);
+        nextPhasePreview.innerText = `[${nextType.name}] ${next.title || ''} (${formatTime(next.durationSec)})`;
+      } else {
+        if (cycleMode === 'single') {
+          nextPhasePreview.innerText = "無 (此循環結束後即停止)";
+        } else if (cycleMode === 'custom' && currentCycle >= targetCycles) {
+          nextPhasePreview.innerText = "無 (即將達成指定輪數)";
+        } else {
+          const nextType = getType(intervals[0].typeId);
+          nextPhasePreview.innerText = `下輪第 1 階：[${nextType.name}] ${intervals[0].title || ''}`;
+        }
+      }
+
+      // Remaining time in current cycle
+      let remainingCycleSec = timeRemaining;
+      for (let i = currentIndex + 1; i < intervals.length; i++) {
+        remainingCycleSec += intervals[i].durationSec;
+      }
+      totalRemainingTime.innerText = formatTime(remainingCycleSec);
+
+      document.title = `(${formatTime(timeRemaining)}) ${typeInfo.name} - 計時儀表板`;
+
+      renderIntervalList();
+      updateKPISummaries();
+    }
+
+    /* =========================================================
+       TIMER TICK ENGINE
+       ========================================================= */
+    function tick() {
+      if (timeRemaining > 1) {
+        timeRemaining--;
+        totalElapsedSec++;
+
+        const current = intervals[currentIndex];
+        typeDurationMap[current.typeId] = (typeDurationMap[current.typeId] || 0) + 1;
+
+        // 3, 2, 1 Countdown Beeps
+        if (timeRemaining <= 3 && timeRemaining >= 1) {
+          sound.playCountdownBeep(timeRemaining);
+        }
+
+        renderTimerUI();
+      } else {
+        // Stage completed
+        completedStagesCount++;
+        totalElapsedSec++;
+        const current = intervals[currentIndex];
+        typeDurationMap[current.typeId] = (typeDurationMap[current.typeId] || 0) + 1;
+
+        // Check if custom stage goal reached
+        if (completedStagesCount === targetStagesGoal) {
+          sound.playCelebration();
+          showToast(`🎯 已達成設定的 ${targetStagesGoal} 個階段目標！`, 'ph-flag-checkered');
+        }
+
+        // Proceed to next interval
+        if (currentIndex < intervals.length - 1) {
+          currentIndex++;
+          timeRemaining = intervals[currentIndex].durationSec;
+          
+          const nextType = getType(intervals[currentIndex].typeId);
+          sound.playSoundByName(nextType.sound);
+
+          showToast(`切換至：${nextType.name} - ${intervals[currentIndex].title}`);
+          renderTimerUI();
+        } else {
+          // Reached end of current cycle list
+          if (cycleMode === 'single') {
+            pauseTimer();
+            timeRemaining = 0;
+            sound.playCelebration();
+            showToast("🎉 單次循環已順利完成！", 'ph-trophy');
+            renderTimerUI();
+          } else if (cycleMode === 'custom') {
+            if (currentCycle < targetCycles) {
+              currentCycle++;
+              currentIndex = 0;
+              timeRemaining = intervals[0].durationSec;
+              const nextType = getType(intervals[0].typeId);
+              sound.playSoundByName(nextType.sound);
+              showToast(`第 ${currentCycle - 1} 輪完成！進入第 ${currentCycle} / ${targetCycles} 輪`);
+              renderTimerUI();
+            } else {
+              pauseTimer();
+              timeRemaining = 0;
+              sound.playCelebration();
+              showToast(`🏆 恭喜！已完整達成設定的 ${targetCycles} 輪循環！`, 'ph-trophy');
+              renderTimerUI();
+            }
+          } else {
+            // Infinite mode
+            currentCycle++;
+            currentIndex = 0;
+            timeRemaining = intervals[0].durationSec;
+            const nextType = getType(intervals[0].typeId);
+            sound.playSoundByName(nextType.sound);
+            showToast(`開始第 ${currentCycle} 輪循環！`);
+            renderTimerUI();
+          }
+        }
+      }
+    }
+
+    /* =========================================================
+       PLAYBACK CONTROLS
+       ========================================================= */
+    function togglePlayPause() {
+      sound.initContext();
+      if (isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (intervals.length === 0) return;
+      if (timeRemaining <= 0) timeRemaining = intervals[currentIndex].durationSec;
+      isRunning = true;
+      playIcon.className = "ph-fill ph-pause text-2xl";
+      playText.innerText = "暫停";
+      timerId = setInterval(tick, 1000);
+      renderTimerUI();
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      playIcon.className = "ph-fill ph-play text-2xl";
+      playText.innerText = "繼續計時";
+      if (timerId) clearInterval(timerId);
+      timerId = null;
+      renderTimerUI();
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      timeRemaining = intervals[currentIndex].durationSec;
+      renderTimerUI();
+      showToast("已重設本階段時間");
+    }
+
+    function skipToNextPhase(manual = true) {
+      pauseTimer();
+      if (currentIndex < intervals.length - 1) {
+        currentIndex++;
+      } else {
+        currentIndex = 0;
+        currentCycle++;
+      }
+      timeRemaining = intervals[currentIndex].durationSec;
+      renderTimerUI();
+      if (manual) showToast(`已跳至第 ${currentIndex + 1} 階：${intervals[currentIndex].title}`);
+    }
+
+    function skipToPrevPhase() {
+      pauseTimer();
+      if (currentIndex > 0) {
+        currentIndex--;
+      } else {
+        currentIndex = intervals.length - 1;
+        if (currentCycle > 1) currentCycle--;
+      }
+      timeRemaining = intervals[currentIndex].durationSec;
+      renderTimerUI();
+      showToast(`返回至第 ${currentIndex + 1} 階：${intervals[currentIndex].title}`);
+    }
+
+    function resetWholeSession() {
+      pauseTimer();
+      currentIndex = 0;
+      timeRemaining = intervals[0] ? intervals[0].durationSec : 0;
+      currentCycle = 1;
+      completedStagesCount = 0;
+      totalElapsedSec = 0;
+      typeDurationMap = {};
+      renderTimerUI();
+      showToast("所有統計與循環階段已全部歸零");
+    }
+
+    /* =========================================================
+       INTERVAL SEQUENCE LIST RENDERING & REORDER
+       ========================================================= */
+    function renderIntervalList() {
+      sequenceCountBadge.innerText = intervals.length;
+
+      intervalListContainer.innerHTML = intervals.map((item, idx) => {
+        const isCurrent = idx === currentIndex;
+        const typeInfo = getType(item.typeId);
+        const colorDef = COLOR_THEMES[typeInfo.color] || COLOR_THEMES.cyan;
+
+        const activeBorder = isCurrent 
+          ? `border-slate-400/60 shadow-lg ring-1 ring-slate-400/40 bg-slate-900/90`
+          : 'border-slate-800 bg-slate-900/40 hover:bg-slate-900/70';
+
+        return `
+          <div class="p-3 rounded-2xl border ${activeBorder} flex items-center justify-between gap-2 transition duration-200 group" style="${isCurrent ? `border-color: ${colorDef.hex}` : ''}">
+            <div class="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1" onclick="jumpToPhase(${idx})">
+              <span class="w-6 h-6 rounded-lg flex items-center justify-center font-mono font-bold text-xs ${isCurrent ? 'text-slate-950 font-extrabold' : 'bg-slate-800 text-slate-400'}" style="${isCurrent ? `background-color: ${colorDef.hex}` : ''}">
+                ${idx + 1}
+              </span>
+              <div class="truncate">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-xs px-2 py-0.5 rounded border text-[11px] font-medium ${colorDef.badgeClass}">
+                    ${typeInfo.name}
+                  </span>
+                  <span class="text-xs font-semibold text-slate-200 truncate ${isCurrent ? 'text-white' : ''}">
+                    ${item.title || typeInfo.name}
+                  </span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 mt-0.5">時長：${formatTime(item.durationSec)}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="moveInterval(${idx}, -1)" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 ${idx === 0 ? 'opacity-30 pointer-events-none' : ''}" title="上移">
+                <i class="ph ph-caret-up text-sm"></i>
+              </button>
+              <button onclick="moveInterval(${idx}, 1)" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 ${idx === intervals.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="下移">
+                <i class="ph ph-caret-down text-sm"></i>
+              </button>
+              <button onclick="openEditIntervalModal(${idx})" class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800" title="編輯此階段">
+                <i class="ph ph-pencil-simple text-sm"></i>
+              </button>
+              <button onclick="deleteInterval(${idx})" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 ${intervals.length <= 1 ? 'opacity-25 pointer-events-none' : ''}" title="刪除">
+                <i class="ph ph-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function jumpToPhase(index) {
+      pauseTimer();
+      currentIndex = index;
+      timeRemaining = intervals[currentIndex].durationSec;
+      renderTimerUI();
+      showToast(`切換至第 ${index + 1} 階：${intervals[currentIndex].title}`);
+    }
+
+    function moveInterval(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= intervals.length) return;
+      const [item] = intervals.splice(index, 1);
+      intervals.splice(targetIndex, 0, item);
+      if (currentIndex === index) currentIndex = targetIndex;
+      else if (currentIndex === targetIndex) currentIndex = index;
+      renderTimerUI();
+    }
+
+    function deleteInterval(index) {
+      if (intervals.length <= 1) {
+        showToast("至少需保留一個階段！");
+        return;
+      }
+      intervals.splice(index, 1);
+      if (currentIndex >= intervals.length) currentIndex = 0;
+      timeRemaining = intervals[currentIndex].durationSec;
+      updateGoalTargets();
+      renderTimerUI();
+      showToast("已刪除該階段");
+    }
+
+    /* =========================================================
+       STAGE TYPE MANAGER LOGIC (性質自訂管理)
+       ========================================================= */
+    function openTypeManagerModal() {
+      renderTypesList();
+      cancelEditType();
+      document.getElementById("typeManagerModal").classList.remove("hidden");
+    }
+
+    function closeTypeManagerModal() {
+      document.getElementById("typeManagerModal").classList.add("hidden");
+      renderTimerUI();
+    }
+
+    function renderTypesList() {
+      const container = document.getElementById("typesList");
+      container.innerHTML = stageTypes.map(t => {
+        const colorDef = COLOR_THEMES[t.color] || COLOR_THEMES.cyan;
+        return `
+          <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-3.5 h-3.5 rounded-full" style="background-color: ${colorDef.hex}"></span>
+              <div>
+                <strong class="text-xs text-white block">${t.name}</strong>
+                <span class="text-[10px] text-slate-400 font-mono">顏色: ${colorDef.label} | 音效: ${t.sound}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button onclick="sound.playSoundByName('${t.sound}')" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800" title="試聽音效">
+                <i class="ph ph-speaker-simple-high text-sm"></i>
+              </button>
+              <button onclick="startEditType('${t.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800" title="修改名稱與設定">
+                <i class="ph ph-pencil text-sm"></i>
+              </button>
+              <button onclick="deleteType('${t.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 ${stageTypes.length <= 1 ? 'opacity-30 pointer-events-none' : ''}" title="刪除性質">
+                <i class="ph ph-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function startEditType(typeId) {
+      const t = stageTypes.find(item => item.id === typeId);
+      if (!t) return;
+      document.getElementById("editTypeId").value = t.id;
+      document.getElementById("newTypeName").value = t.name;
+      document.getElementById("newTypeColor").value = t.color;
+      document.getElementById("newTypeSound").value = t.sound;
+      document.getElementById("btnSaveType").innerText = "儲存修改";
+      document.getElementById("btnCancelEditType").classList.remove("hidden");
+    }
+
+    function cancelEditType() {
+      document.getElementById("editTypeId").value = "";
+      document.getElementById("newTypeName").value = "";
+      document.getElementById("newTypeColor").value = "cyan";
+      document.getElementById("newTypeSound").value = "chime_up";
+      document.getElementById("btnSaveType").innerText = "新增性質";
+      document.getElementById("btnCancelEditType").classList.add("hidden");
+    }
+
+    function saveStageType() {
+      const editId = document.getElementById("editTypeId").value.trim();
+      const name = document.getElementById("newTypeName").value.trim();
+      const color = document.getElementById("newTypeColor").value;
+      const soundChoice = document.getElementById("newTypeSound").value;
+
+      if (!name) {
+        showToast("請輸入性質名稱！");
+        return;
+      }
+
+      if (editId) {
+        // Update existing type
+        const idx = stageTypes.findIndex(item => item.id === editId);
+        if (idx !== -1) {
+          stageTypes[idx].name = name;
+          stageTypes[idx].color = color;
+          stageTypes[idx].sound = soundChoice;
+          showToast(`已更新「${name}」性質設定！`);
+        }
+      } else {
+        // Create new type
+        const newId = 'type_' + Date.now();
+        stageTypes.push({
+          id: newId,
+          name: name,
+          color: color,
+          sound: soundChoice,
+          icon: 'ph-star'
+        });
+        showToast(`成功新增性質「${name}」！`);
+      }
+
+      cancelEditType();
+      renderTypesList();
+      renderTimerUI();
+    }
+
+    function deleteType(typeId) {
+      if (stageTypes.length <= 1) {
+        showToast("至少需保留一種階段性質！");
+        return;
+      }
+      stageTypes = stageTypes.filter(t => t.id !== typeId);
+      // Remap any interval using deleted type to first available
+      intervals.forEach(inv => {
+        if (inv.typeId === typeId) {
+          inv.typeId = stageTypes[0].id;
+        }
+      });
+      showToast("已刪除該性質");
+      renderTypesList();
+      renderTimerUI();
+    }
+
+    function testSelectedTypeSound() {
+      const soundChoice = document.getElementById("newTypeSound").value;
+      sound.playSoundByName(soundChoice);
+    }
+
+    /* =========================================================
+       INTERVAL ADD / EDIT MODAL
+       ========================================================= */
+    function openAddIntervalModal() {
+      document.getElementById("modalTitle").innerHTML = `<i class="ph ph-plus-circle text-cyan-400"></i> 新增自訂階段`;
+      document.getElementById("editingIndex").value = "-1";
+      document.getElementById("modalLabel").value = "";
+      document.getElementById("modalMinutes").value = "1";
+      document.getElementById("modalSeconds").value = "0";
+
+      renderTypeSelectorInModal(stageTypes[0].id);
+      document.getElementById("intervalModal").classList.remove("hidden");
+    }
+
+    function openEditIntervalModal(idx) {
+      const item = intervals[idx];
+      document.getElementById("modalTitle").innerHTML = `<i class="ph ph-pencil-simple text-cyan-400"></i> 編輯第 ${idx + 1} 階段`;
+      document.getElementById("editingIndex").value = idx;
+      document.getElementById("modalLabel").value = item.title;
+      document.getElementById("modalMinutes").value = Math.floor(item.durationSec / 60);
+      document.getElementById("modalSeconds").value = item.durationSec % 60;
+
+      renderTypeSelectorInModal(item.typeId);
+      document.getElementById("intervalModal").classList.remove("hidden");
+    }
+
+    function renderTypeSelectorInModal(selectedTypeId) {
+      const grid = document.getElementById("modalTypeGrid");
+      grid.innerHTML = stageTypes.map(t => {
+        const isChecked = t.id === selectedTypeId;
+        const colorDef = COLOR_THEMES[t.color] || COLOR_THEMES.cyan;
+        return `
+          <label class="cursor-pointer block">
+            <input type="radio" name="modalStageType" value="${t.id}" ${isChecked ? 'checked' : ''} class="peer sr-only">
+            <div class="p-2.5 rounded-xl border border-slate-800 bg-slate-900 peer-checked:border-slate-300 peer-checked:bg-slate-800 text-slate-300 font-medium text-xs flex items-center gap-2 transition" style="peer-checked:border-color: ${colorDef.hex}">
+              <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${colorDef.hex}"></span>
+              <span class="truncate">${t.name}</span>
+            </div>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function closeIntervalModal() {
+      document.getElementById("intervalModal").classList.add("hidden");
+    }
+
+    function handleIntervalFormSubmit(e) {
+      e.preventDefault();
+      const editIdx = parseInt(document.getElementById("editingIndex").value, 10);
+      const selectedRadio = document.querySelector('input[name="modalStageType"]:checked');
+      const typeId = selectedRadio ? selectedRadio.value : stageTypes[0].id;
+      const typeInfo = getType(typeId);
+
+      let title = document.getElementById("modalLabel").value.trim();
+      const min = parseInt(document.getElementById("modalMinutes").value, 10) || 0;
+      const sec = parseInt(document.getElementById("modalSeconds").value, 10) || 0;
+      const totalSec = Math.max(3, (min * 60) + sec);
+
+      if (!title) {
+        title = `${typeInfo.name} (${formatTime(totalSec)})`;
+      }
+
+      if (editIdx >= 0) {
+        intervals[editIdx] = {
+          ...intervals[editIdx],
+          typeId,
+          title,
+          durationSec: totalSec
+        };
+        if (currentIndex === editIdx) timeRemaining = totalSec;
+        showToast("已更新階段資訊");
+      } else {
+        intervals.push({
+          id: Date.now(),
+          typeId,
+          title,
+          durationSec: totalSec
+        });
+        showToast("已新增階段");
+      }
+
+      updateGoalTargets();
+      closeIntervalModal();
+      renderTimerUI();
+    }
+
+    /* =========================================================
+       CYCLE COUNT & TARGET GOALS MODAL
+       ========================================================= */
+    function openCycleGoalModal() {
+      setCycleOption(cycleMode);
+      document.getElementById("inputCustomCycleCount").value = targetCycles;
+      
+      if (goalMode === 'auto') {
+        document.getElementById("goalModeAuto").checked = true;
+      } else {
+        document.getElementById("goalModeManual").checked = true;
+      }
+      document.getElementById("inputCustomGoalStages").value = targetStagesGoal;
+      toggleGoalInputMode();
+
+      document.getElementById("cycleGoalModal").classList.remove("hidden");
+    }
+
+    function closeCycleGoalModal() {
+      document.getElementById("cycleGoalModal").classList.add("hidden");
+    }
+
+    let tempCycleOption = 'single';
+    function setCycleOption(mode) {
+      tempCycleOption = mode;
+      const bSingle = document.getElementById("optCycleSingle");
+      const bCustom = document.getElementById("optCycleCustom");
+      const bInf = document.getElementById("optCycleInfinite");
+      const customRow = document.getElementById("customCycleInputRow");
+
+      [bSingle, bCustom, bInf].forEach(b => {
+        b.className = "p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center";
+      });
+
+      if (mode === 'single') {
+        bSingle.className = "p-2.5 rounded-xl border border-cyan-500 bg-cyan-950/40 text-cyan-300 font-bold text-center";
+        customRow.classList.add("hidden");
+      } else if (mode === 'custom') {
+        bCustom.className = "p-2.5 rounded-xl border border-cyan-500 bg-cyan-950/40 text-cyan-300 font-bold text-center";
+        customRow.classList.remove("hidden");
+        customRow.classList.add("flex");
+      } else {
+        bInf.className = "p-2.5 rounded-xl border border-cyan-500 bg-cyan-950/40 text-cyan-300 font-bold text-center";
+        customRow.classList.add("hidden");
+      }
+    }
+
+    function toggleGoalInputMode() {
+      const isManual = document.getElementById("goalModeManual").checked;
+      const row = document.getElementById("customGoalInputRow");
+      if (isManual) {
+        row.classList.remove("hidden");
+        row.classList.add("flex");
+      } else {
+        row.classList.add("hidden");
+        row.classList.remove("flex");
+      }
+    }
+
+    function saveCycleGoalSettings() {
+      cycleMode = tempCycleOption;
+      if (cycleMode === 'single') {
+        targetCycles = 1;
+      } else if (cycleMode === 'custom') {
+        targetCycles = parseInt(document.getElementById("inputCustomCycleCount").value, 10) || 1;
+      } else {
+        targetCycles = Infinity;
+      }
+
+      const isManualGoal = document.getElementById("goalModeManual").checked;
+      if (isManualGoal) {
+        goalMode = 'manual';
+        targetStagesGoal = parseInt(document.getElementById("inputCustomGoalStages").value, 10) || intervals.length;
+      } else {
+        goalMode = 'auto';
+        updateGoalTargets();
+      }
+
+      closeCycleGoalModal();
+      renderTimerUI();
+      showToast("循環與目標設定已套用！");
+    }
+
+    /* =========================================================
+       BATCH BUILDER
+       ========================================================= */
+    function openBatchModal() {
+      const select1 = document.getElementById("batchType1");
+      const select2 = document.getElementById("batchType2");
+      const optionsHtml = stageTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      select1.innerHTML = optionsHtml;
+      select2.innerHTML = optionsHtml;
+      if (stageTypes[1]) select2.value = stageTypes[1].id;
+
+      document.getElementById("batchModal").classList.remove("hidden");
+    }
+    function closeBatchModal() {
+      document.getElementById("batchModal").classList.add("hidden");
+    }
+
+    function applyBatchGenerator() {
+      const typeId1 = document.getElementById("batchType1").value;
+      const typeId2 = document.getElementById("batchType2").value;
+      const min1 = parseInt(document.getElementById("batchMin1").value, 10) || 0;
+      const sec1 = parseInt(document.getElementById("batchSec1").value, 10) || 0;
+      const min2 = parseInt(document.getElementById("batchMin2").value, 10) || 0;
+      const sec2 = parseInt(document.getElementById("batchSec2").value, 10) || 0;
+      const rounds = parseInt(document.getElementById("batchRounds").value, 10) || 4;
+
+      const dur1 = Math.max(3, (min1 * 60) + sec1);
+      const dur2 = Math.max(3, (min2 * 60) + sec2);
+
+      const type1 = getType(typeId1);
+      const type2 = getType(typeId2);
+
+      pauseTimer();
+      const newSequence = [];
+      for (let r = 1; r <= rounds; r++) {
+        newSequence.push({
+          id: Date.now() + (r * 2),
+          typeId: typeId1,
+          title: `第 ${r} 組 ${type1.name} (${formatTime(dur1)})`,
+          durationSec: dur1
+        });
+        newSequence.push({
+          id: Date.now() + (r * 2) + 1,
+          typeId: typeId2,
+          title: `第 ${r} 組 ${type2.name} (${formatTime(dur2)})`,
+          durationSec: dur2
+        });
+      }
+
+      intervals = newSequence;
+      currentIndex = 0;
+      timeRemaining = intervals[0].durationSec;
+      updateGoalTargets();
+      closeBatchModal();
+      renderTimerUI();
+      showToast(`已批次建立 ${rounds} 組階段清單！`);
+    }
+
+    /* =========================================================
+       PRESET MODES
+       ========================================================= */
+    function applyPreset(presetType) {
+      pauseTimer();
+      if (presetType === 'default_custom') {
+        intervals = [
+          { id: 1, typeId: 'work', title: '計時1分鐘', durationSec: 60 },
+          { id: 2, typeId: 'rest', title: '休息1分鐘', durationSec: 60 },
+          { id: 3, typeId: 'work', title: '計時2分鐘', durationSec: 120 },
+          { id: 4, typeId: 'rest', title: '休息1分鐘', durationSec: 60 }
+        ];
+        cycleMode = 'custom';
+        targetCycles = 3;
+        goalMode = 'auto';
+        showToast("已載入：原定工作/休息交替 (自訂3輪)");
+      } else if (presetType === 'fitness_complex') {
+        intervals = [
+          { id: 1, typeId: 'hiit', title: '高強度深蹲波比跳', durationSec: 45 },
+          { id: 2, typeId: 'rest', title: '短暫調息', durationSec: 20 },
+          { id: 3, typeId: 'hiit', title: '核心棒式平板支撐', durationSec: 45 },
+          { id: 4, typeId: 'stretch', title: '腿部與肩背拉伸', durationSec: 40 },
+          { id: 5, typeId: 'hydration', title: '補充水分與電解質', durationSec: 30 }
+        ];
+        cycleMode = 'custom';
+        targetCycles = 4;
+        goalMode = 'auto';
+        showToast("已載入：健身拉伸與喝水全方位模式");
+      } else if (presetType === 'deep_work_routine') {
+        intervals = [
+          { id: 1, typeId: 'breathe', title: '4-7-8 深度呼吸調息', durationSec: 90 },
+          { id: 2, typeId: 'work', title: '番茄專注心流第一段', durationSec: 25 * 60 },
+          { id: 3, typeId: 'stretch', title: '肩頸肌肉伸展', durationSec: 3 * 60 },
+          { id: 4, typeId: 'hydration', title: '補充溫水', durationSec: 60 },
+          { id: 5, typeId: 'rest', title: '閉目養神', durationSec: 5 * 60 }
+        ];
+        cycleMode = 'single';
+        targetCycles = 1;
+        goalMode = 'auto';
+        showToast("已載入：深度心流工作循環");
+      } else if (presetType === 'single_loop') {
+        intervals = [
+          { id: 1, typeId: 'work', title: '計時1分鐘', durationSec: 60 },
+          { id: 2, typeId: 'rest', title: '休息1分鐘', durationSec: 60 },
+          { id: 3, typeId: 'work', title: '計時2分鐘', durationSec: 120 },
+          { id: 4, typeId: 'rest', title: '休息1分鐘', durationSec: 60 }
+        ];
+        cycleMode = 'single';
+        targetCycles = 1;
+        goalMode = 'auto';
+        showToast("已載入：單次循環模式");
+      }
+
+      currentIndex = 0;
+      currentCycle = 1;
+      completedStagesCount = 0;
+      timeRemaining = intervals[0].durationSec;
+      updateGoalTargets();
+      renderTimerUI();
+    }
+
+    /* =========================================================
+       DYNAMIC KPI UPDATES
+       ========================================================= */
+    function updateKPISummaries() {
+      kpiTotalTime.innerText = formatTime(totalElapsedSec);
+      kpiCompletedSteps.innerText = completedStagesCount;
+
+      // Show top 2 primary types in metrics
+      const type1 = stageTypes[0] || { id: 'work', name: '專注' };
+      const type2 = stageTypes[1] || { id: 'rest', name: '休息' };
+
+      kpiFirstTypeName.innerText = `累積 ${type1.name}`;
+      kpiFirstTypeTime.innerText = formatTime(typeDurationMap[type1.id] || 0);
+
+      kpiSecondTypeName.innerText = `累積 ${type2.name}`;
+      kpiSecondTypeTime.innerText = formatTime(typeDurationMap[type2.id] || 0);
+    }
+
+    /* =========================================================
+       TOOLBAR & SOUND CONTROLS
+       ========================================================= */
+    document.getElementById("btnSoundToggle").addEventListener("click", () => {
+      sound.enabled = !sound.enabled;
+      const icon = document.getElementById("soundIcon");
+      const label = document.getElementById("soundLabel");
+      if (sound.enabled) {
+        icon.className = "ph ph-speaker-high text-base text-cyan-400";
+        label.innerText = "音效開啟";
+        showToast("音效已開啟");
+      } else {
+        icon.className = "ph ph-speaker-slash text-base text-slate-500";
+        label.innerText = "已靜音";
+        showToast("音效已靜音");
+      }
+    });
+
+    document.getElementById("btnTestSound").addEventListener("click", () => {
+      sound.initContext();
+      const current = intervals[currentIndex];
+      const typeInfo = getType(current.typeId);
+      sound.playSoundByName(typeInfo.sound);
+      showToast(`正在播放「${typeInfo.name}」專屬提示音效`);
+    });
+
+    document.getElementById("btnFullscreen").addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          showToast(`無法切換全螢幕: ${err.message}`);
+        });
+        document.getElementById("fullscreenIcon").className = "ph ph-corners-in text-base";
+      } else {
+        document.exitFullscreen();
+        document.getElementById("fullscreenIcon").className = "ph ph-corners-out text-base";
+      }
+    });
+
+    /* =========================================================
+       KEYBOARD SHORTCUTS
+       ========================================================= */
+    window.addEventListener("keydown", (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        skipToNextPhase(true);
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        skipToPrevPhase();
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        resetTimer();
+      }
+    });
+
+    window.onload = function() {
+      updateGoalTargets();
+      renderTimerUI();
+    };
+  </script>
+</body>
+</html>
